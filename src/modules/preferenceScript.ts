@@ -1,5 +1,6 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
+import { setPref } from "../utils/prefs";
 
 export async function registerPrefsScripts(_window: Window) {
   // This function is called when the prefs window is opened
@@ -127,5 +128,42 @@ function bindPrefEvents() {
       addon.data.prefs!.window.alert(
         `Successfully changed to ${(e.target as HTMLInputElement).value}!`,
       );
+    });
+
+  addon.data
+    .prefs!.window.document.querySelector(
+      `#zotero-prefpane-${config.addonRef}-select-folder`,
+    )
+    ?.addEventListener("command", async (e) => {
+      // 使用 ztoolkit 中的 FilePicker 帮助类选择文件夹
+      try {
+        const folderPicker = new ztoolkit.FilePicker(
+          "Select Folder",
+          "folder", // 这里使用 "folder" 模式选择文件夹
+        );
+
+        // 打开文件夹选择器并获取选择的路径
+        const folderPath = await folderPicker.open();
+
+        if (folderPath) {
+          // 如果用户选择了文件夹，则更新首选项和输入框的值
+          const inputElement = addon.data.prefs!.window.document.querySelector(
+            `#zotero-prefpane-${config.addonRef}-folderPath`,
+          ) as HTMLInputElement;
+
+          inputElement.value = folderPath;
+          // 保存到首选项
+          setPref("folderPath", folderPath);
+
+          addon.data.prefs!.window.alert(
+            `Folder path set to: ${folderPath}`,
+          );
+        }
+      } catch (error: any) {
+        ztoolkit.log("Error selecting folder:", error);
+        addon.data.prefs!.window.alert(
+          `Error selecting folder: ${error.message || error}`,
+        );
+      }
     });
 }

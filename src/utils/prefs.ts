@@ -34,3 +34,12 @@ export function setPref<K extends keyof PluginPrefsMap>(
 export function clearPref(key: string) {
   return Zotero.Prefs.clear(`${PREFS_PREFIX}.${key}`, true);
 }
+
+
+/**
+ * 获取用户选择的文件夹路径
+ * @returns 文件夹路径，如果未设置则返回空字符串
+ */
+export function getFolderPath(): string {
+  return getPref("folderPath") || "";
+}
