@@ -149,6 +149,28 @@ export class UIExampleFactory {
     });
   }
 
+
+  /**
+   * 注册文库(Collection)上的右键菜单
+   */
+  @example
+  static registerCollectionRightClickMenuItem() {
+    // 为Collection注册右键菜单
+    ztoolkit.Menu.register("collection", {
+      tag: "menuitem",
+      id: "zotero-collectionmenu-list-content",
+      label: "列出当前目录内容",
+      commandListener: (ev) => this.listCollectionContents(),
+    });
+    ztoolkit.Menu.register("collection", {
+      tag: "menuitem",
+      id: "zotero-collectionmenu-copy-pdfs",
+      label: "复制此目录中所有PDF",
+      commandListener: (ev) => this.copyAllPDFsInCollection(),
+    });
+
+  }
+
   @example
   static registerRightClickMenuPopup(win: Window) {
     ztoolkit.Menu.register(
@@ -162,6 +184,16 @@ export class UIExampleFactory {
             label: getString("menuitem-submenulabel"),
             oncommand: "alert('Hello World! Sub Menuitem.')",
           },
+          {
+            tag: "menuitem",
+            label: "显示选择的文件夹",
+            commandListener: (ev) => this.istlFilesInFolder(),
+          },
+          {
+            tag: "menuitem",
+            label: "复制PDF",
+            commandListener: (ev) => this.showItemAttachmentNames(),
+          },
         ],
       },
       "before",
@@ -169,6 +201,593 @@ export class UIExampleFactory {
         "#zotero-itemmenu-addontemplate-test",
       ) as XUL.MenuItem,
     );
+  }
+
+
+  /**
+   * 复制当前选中目录中所有论文的PDF附件到设置的文件夹
+   */
+  static async copyAllPDFsInCollection() {
+    try {
+      // 获取当前选中的collection
+      const collectionsView = ztoolkit.getGlobal("ZoteroPane").collectionsView;
+      if (!collectionsView) {
+        ztoolkit.getGlobal("alert")("无法获取集合视图");
+        return;
+      }
+      const selectedCollection = collectionsView.getSelectedCollection();
+
+      if (!selectedCollection) {
+        ztoolkit.getGlobal("alert")("请先选择一个目录");
+        return;
+      }
+
+      // 获取设置的全局文件夹路径
+      const { getFolderPath } = require("../utils/prefs");
+      const targetFolderPath = getFolderPath();
+
+      if (!targetFolderPath) {
+        ztoolkit.getGlobal("alert")("未设置目标文件夹，请先在首选项中设置文件夹路径");
+        return;
+      }
+
+      // 检查目标文件夹是否存在
+      const targetDir = (Components as any).classes["@mozilla.org/file/local;1"]
+        .createInstance(Components.interfaces.nsIFile);
+      targetDir.initWithPath(targetFolderPath);
+
+      if (!targetDir.exists() || !targetDir.isDirectory()) {
+        ztoolkit.getGlobal("alert")(`目标文件夹不存在: ${targetFolderPath}`);
+        return;
+      }
+
+      // 创建进度窗口
+      const progressWindow = new ztoolkit.ProgressWindow(addon.data.config.addonName)
+        .createLine({
+          text: `正在获取目录中的论文...`,
+          type: "default",
+          progress: 0
+        })
+        .show();
+
+      // 获取目录中的所有条目
+      const collectionItems = selectedCollection.getChildItems();
+      const regularItems = [];
+
+      // 过滤出常规条目（论文）
+      for (const item of collectionItems) {
+        if (item.isRegularItem()) {
+          regularItems.push(item);
+        }
+      }
+
+      if (regularItems.length === 0) {
+        progressWindow.changeLine({
+          text: "该目录中没有论文",
+          type: "error",
+          progress: 100
+        });
+        return;
+      }
+
+      progressWindow.changeLine({
+        text: `找到 ${regularItems.length} 篇论文，正在处理附件...`,
+        type: "default",
+        progress: 20
+      });
+
+      // 处理结果统计
+      let processedItems = 0;
+      let copiedFiles = 0;
+      let errorItems = 0;
+
+      // 遍历每个论文条目，获取所有附件名称并复制PDF
+      for (const item of regularItems) {
+        try {
+          const attachments = await item.getAttachments();
+          if (attachments && attachments.length > 0) {
+            const itemTitle = item.getField("title");
+            let pdfFound = false;
+
+            // 使用条目标题作为文件名，替换掉非法字符
+            const safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
+
+            for (const attachmentID of attachments) {
+              const attachment = await Zotero.Items.getAsync(attachmentID);
+              if (attachment && attachment.isAttachment()) {
+                // 如果是PDF且尚未处理过PDF，则复制它
+                const contentType = attachment.getField("contentType");
+                if (!pdfFound) {
+                  pdfFound = true;
+                  try {
+                    // 获取附件的文件路径
+                    const attachmentFilePath = await attachment.getFilePathAsync();
+
+                    if (attachmentFilePath) {
+                      // 创建源文件对象
+                      const sourceFile = (Components as any).classes["@mozilla.org/file/local;1"]
+                        .createInstance(Components.interfaces.nsIFile);
+                      sourceFile.initWithPath(attachmentFilePath);
+
+                      // 创建目标文件对象
+                      const targetFile = targetDir.clone();
+                      targetFile.append(`${safeItemTitle}.pdf`);
+
+                      // 检查目标文件是否已存在
+                      if (targetFile.exists()) {
+                        targetFile.remove(false); // 删除已存在的文件
+                      }
+
+                      // 复制文件
+                      sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
+                      copiedFiles++;
+                    }
+                  } catch (e) {
+                    ztoolkit.log(`复制附件时出错: ${e}`, "error");
+                    errorItems++;
+                  }
+                }
+              }
+            }
+          }
+          processedItems++;
+
+          // 更新进度
+          const progress = Math.floor((processedItems / regularItems.length) * 80) + 20;
+          progressWindow.changeLine({
+            text: `已处理 ${processedItems}/${regularItems.length} 篇论文，复制了 ${copiedFiles} 个PDF文件`,
+            type: "default",
+            progress: progress
+          });
+        } catch (error) {
+          errorItems++;
+          ztoolkit.log(`处理条目时出错: ${error}`, "error");
+        }
+      }
+
+      // 显示最终结果
+      progressWindow.changeLine({
+        text: `共处理 ${processedItems} 篇论文，成功复制 ${copiedFiles} 个PDF文件${errorItems > 0 ? `，${errorItems} 个错误` : ''}`,
+        type: errorItems > 0 ? "warning" : "success",
+        progress: 100
+      });
+
+      // 如果有复制的文件，显示详细信息
+      if (copiedFiles > 0) {
+        ztoolkit.getGlobal("alert")(`已成功将 ${copiedFiles} 个PDF文件复制到:\n${targetFolderPath}`);
+      }
+
+    } catch (error: any) {
+      ztoolkit.log("处理目录PDF时出错:", error);
+      ztoolkit.getGlobal("alert")(`处理目录PDF时出错: ${error.message || error}`);
+    }
+  }
+
+  /**
+   * 列出当前选中目录中的所有论文和子目录
+   */
+  static async listCollectionContents() {
+    try {
+      // 获取当前选中的collection
+      const collectionsView = ztoolkit.getGlobal("ZoteroPane").collectionsView;
+      if (!collectionsView) {
+        ztoolkit.getGlobal("alert")("无法获取集合视图");
+        return;
+      }
+      const selectedCollection = collectionsView.getSelectedCollection();
+
+      if (!selectedCollection) {
+        ztoolkit.getGlobal("alert")("请先选择一个目录");
+        return;
+      }
+
+      const progressWindow = new ztoolkit.ProgressWindow(addon.data.config.addonName)
+        .createLine({
+          text: `正在读取目录内容...`,
+          type: "default",
+          progress: 0
+        })
+        .show();
+
+      // 获取目录中的所有条目
+      const collectionItems = selectedCollection.getChildItems();
+      const itemTitles: string[] = [];
+
+      // 遍历条目，获取标题
+      for (const item of collectionItems) {
+        if (item.isRegularItem()) {
+          itemTitles.push(item.getField("title") as string);
+        }
+      }
+
+      // 获取所有子目录
+      const childCollections = selectedCollection.getChildCollections();
+      const subCollectionNames: string[] = childCollections.map((c: Zotero.Collection) => c.name);
+
+      // 更新进度窗口
+      progressWindow.changeLine({
+        text: `找到 ${itemTitles.length} 篇论文和 ${subCollectionNames.length} 个子目录`,
+        progress: 100
+      });
+
+      // 创建显示内容
+      let message = `目录 "${selectedCollection.name}" 的内容:\n\n`;
+
+      if (subCollectionNames.length > 0) {
+        message += `子目录 (${subCollectionNames.length}):\n`;
+        message += subCollectionNames.map(name => `• ${name}`).join('\n');
+        message += '\n\n';
+      }
+
+      if (itemTitles.length > 0) {
+        message += `论文 (${itemTitles.length}):\n`;
+        message += itemTitles.map((title, index) => `${index + 1}. ${title}`).join('\n');
+      } else {
+        message += '没有论文';
+      }
+
+      // 如果内容太多，使用对话框显示而不是alert
+      if (itemTitles.length > 10 || message.length > 1000) {
+        // 创建一个对话框展示结果
+        const dialogData = {
+          collectionName: selectedCollection.name,
+          itemTitles,
+          subCollectionNames,
+          loadCallback: () => {
+            ztoolkit.log("目录内容对话框已打开");
+          }
+        };
+
+        const dialogHeight = Math.min(itemTitles.length + subCollectionNames.length + 5, 30);
+        const dialogHelper = new ztoolkit.Dialog(dialogHeight, 1)
+          .addCell(0, 0, {
+            tag: "h2",
+            properties: { innerHTML: `目录 "${selectedCollection.name}" 的内容` },
+          });
+
+        // 添加子目录部分
+        if (subCollectionNames.length > 0) {
+          dialogHelper.addCell(1, 0, {
+            tag: "h3",
+            properties: { innerHTML: `子目录 (${subCollectionNames.length}):` },
+          });
+
+          subCollectionNames.forEach((name, index) => {
+            dialogHelper.addCell(index + 2, 0, {
+              tag: "div",
+              properties: { innerHTML: `• ${name}` },
+              styles: {
+                padding: "2px 5px",
+                color: "#2d8ac7",
+                fontWeight: "bold"
+              }
+            });
+          });
+
+          // 添加分隔行
+          dialogHelper.addCell(subCollectionNames.length + 2, 0, {
+            tag: "hr",
+            styles: {
+              margin: "10px 0"
+            }
+          });
+        }
+
+        // 添加论文部分
+        dialogHelper.addCell(subCollectionNames.length + 3, 0, {
+          tag: "h3",
+          properties: { innerHTML: `论文 (${itemTitles.length}):` },
+        });
+
+        if (itemTitles.length > 0) {
+          itemTitles.forEach((title, index) => {
+            dialogHelper.addCell(subCollectionNames.length + index + 4, 0, {
+              tag: "div",
+              properties: { innerHTML: `${index + 1}. ${title}` },
+              styles: {
+                padding: "2px 5px",
+                borderBottom: index < itemTitles.length - 1 ? "1px solid #eee" : "none"
+              }
+            });
+          });
+        } else {
+          dialogHelper.addCell(subCollectionNames.length + 4, 0, {
+            tag: "div",
+            properties: { innerHTML: "没有论文" },
+            styles: {
+              padding: "2px 5px",
+              fontStyle: "italic",
+              color: "#888"
+            }
+          });
+        }
+
+        dialogHelper
+          .addButton("关闭", "close")
+          .setDialogData(dialogData)
+          .open("目录内容");
+      } else {
+        // 内容较少，直接使用alert显示
+        ztoolkit.getGlobal("alert")(message);
+      }
+    } catch (error: any) {
+      ztoolkit.log("读取目录内容时出错:", error);
+      ztoolkit.getGlobal("alert")(`读取目录内容时出错: ${error.message || error}`);
+    }
+  }
+
+
+  /**
+   * 获取当前选中条目的所有附件名称并显示，并复制第一个PDF附件到设置的文件夹
+   */
+  static async showItemAttachmentNames() {
+    try {
+      // 获取当前选中的条目
+      const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems();
+
+      if (!items || items.length === 0) {
+        ztoolkit.getGlobal("alert")("未选择任何条目");
+        return;
+      }
+
+      const progressWindow = new ztoolkit.ProgressWindow(addon.data.config.addonName)
+        .createLine({
+          text: `正在处理附件...`,
+          type: "default",
+          progress: 0
+        })
+        .show();
+
+      // 获取设置的全局文件夹路径
+      const { getFolderPath } = require("../utils/prefs");
+      const targetFolderPath = getFolderPath();
+
+      if (!targetFolderPath) {
+        progressWindow.changeLine({
+          text: "未设置目标文件夹，请先在首选项中设置文件夹路径",
+          type: "error",
+          progress: 100
+        });
+        return;
+      }
+
+      // 检查目标文件夹是否存在
+      const targetDir = (Components.classes as any)["@mozilla.org/file/local;1"]
+        .createInstance(Components.interfaces.nsIFile);
+      targetDir.initWithPath(targetFolderPath);
+
+      if (!targetDir.exists() || !targetDir.isDirectory()) {
+        progressWindow.changeLine({
+          text: `目标文件夹不存在: ${targetFolderPath}`,
+          type: "error",
+          progress: 100
+        });
+        return;
+      }
+
+      // 遍历每个选中的条目，获取所有附件名称并复制PDF
+      let allAttachments = [];
+      let copiedFiles = 0;
+
+      progressWindow.changeLine({
+        text: `正在处理 ${items.length} 个条目的附件...`,
+        type: "default",
+        progress: 20
+      });
+
+      for (const item of items) {
+        const attachments = await item.getAttachments();
+        if (attachments && attachments.length > 0) {
+          const itemTitle = item.getField("title");
+          const attachmentNames = [];
+          let pdfFound = false;
+
+          // 使用条目标题作为文件名，替换掉非法字符
+          const safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
+
+          for (const attachmentID of attachments) {
+            const attachment = await Zotero.Items.getAsync(attachmentID);
+            if (attachment && attachment.isAttachment()) {
+              const attachmentName = attachment.getField("title");
+              attachmentNames.push(attachmentName);
+
+              // 如果是PDF且尚未处理过PDF，则复制它
+              const contentType = attachment.getField("contentType");
+              if (!pdfFound) {
+                pdfFound = true;
+                try {
+                  // 获取附件的文件路径
+                  const attachmentFilePath = await attachment.getFilePathAsync();
+
+                  if (attachmentFilePath) {
+                    // 创建源文件对象
+                    const sourceFile = (Components.classes as any)["@mozilla.org/file/local;1"]
+                      .createInstance(Components.interfaces.nsIFile);
+                    sourceFile.initWithPath(attachmentFilePath);
+
+                    // 创建目标文件对象
+                    const targetFile = targetDir.clone();
+                    targetFile.append(`${safeItemTitle}.pdf`);
+
+                    // 检查目标文件是否已存在
+                    if (targetFile.exists()) {
+                      targetFile.remove(false); // 删除已存在的文件
+                    }
+
+                    // 复制文件
+                    sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
+                    copiedFiles++;
+                  }
+                } catch (e) {
+                  ztoolkit.log(`复制附件时出错: ${e}`, "error");
+                }
+              }
+            }
+          }
+
+          if (attachmentNames.length > 0) {
+            allAttachments.push({
+              itemTitle: itemTitle,
+              attachmentNames: attachmentNames
+            });
+          }
+        }
+      }
+
+      progressWindow.changeLine({
+        text: `已处理 ${items.length} 个条目，复制了 ${copiedFiles} 个PDF文件`,
+        type: "success",
+        progress: 100
+      });
+
+      // 显示附件名称
+      if (allAttachments.length > 0) {
+        let message = "";
+
+        for (const item of allAttachments) {
+          message += `条目: ${item.itemTitle}\n`;
+          message += `附件: ${item.attachmentNames.join(", ")}\n\n`;
+        }
+
+        if (copiedFiles > 0) {
+          message += `------------------\n`;
+          message += `已将 ${copiedFiles} 个PDF文件复制到:\n${targetFolderPath}`;
+        }
+
+        ztoolkit.getGlobal("alert")(message);
+      } else {
+        ztoolkit.getGlobal("alert")("所选条目没有附件");
+      }
+
+    } catch (error: any) {
+      ztoolkit.log("获取附件信息时出错:", error);
+      ztoolkit.getGlobal("alert")(`获取附件信息时出错: ${error.message || error}`);
+    }
+  }
+  /**
+   * 打开文件夹，遍历其中的所有文件并打印文件名
+   */
+  static async istlFilesInFolder() {
+    try {
+      const { getFolderPath } = require("../utils/prefs");
+      let folderPath = getFolderPath();
+
+      // 如果未设置文件夹路径，则提示用户选择一个文件夹
+      if (!folderPath) {
+        ztoolkit.getGlobal("alert")("未设置文件夹路径，请先选择一个文件夹");
+        const folderPicker = new ztoolkit.FilePicker(
+          "选择要遍历的文件夹",
+          "folder"
+        );
+        folderPath = await folderPicker.open();
+
+        if (!folderPath) {
+          ztoolkit.getGlobal("alert")("您没有选择文件夹，操作取消");
+          return;
+        }
+      }
+
+      // 创建进度窗口
+      const progressWindow = new ztoolkit.ProgressWindow(addon.data.config.addonName)
+        .createLine({
+          text: `正在读取文件夹: ${folderPath}`,
+          type: "default",
+          progress: 0
+        })
+        .show();
+
+      // 使用 nsIFile 接口来读取文件夹
+      const directory = (Components.classes as any)["@mozilla.org/file/local;1"]
+        .createInstance(Components.interfaces.nsIFile);
+      directory.initWithPath(folderPath);
+
+      // 检查路径是否存在且是文件夹
+      if (!directory.exists()) {
+        ztoolkit.getGlobal("alert")(`指定的路径 "${folderPath}" 不存在`);
+        return;
+      }
+
+      if (!directory.isDirectory()) {
+        ztoolkit.getGlobal("alert")(`指定的路径 "${folderPath}" 不是一个文件夹`);
+        return;
+      }
+
+      // 获取文件夹中的所有文件和子文件夹
+      const fileList: string[] = [];
+      const entries = directory.directoryEntries;
+
+      while (entries.hasMoreElements()) {
+        const entry = entries.getNext().QueryInterface(Components.interfaces.nsIFile);
+        const isDirectory = entry.isDirectory();
+        fileList.push(`${isDirectory ? "[目录] " : "[文件] "}${entry.leafName}`);
+      }
+
+      // 更新进度窗口
+      progressWindow.changeLine({
+        text: `找到 ${fileList.length} 个文件/目录`,
+        progress: 100
+      });
+
+      // 显示结果
+      if (fileList.length > 0) {
+        // 创建一个对话框来展示所有文件
+        const dialogData = {
+          fileList: fileList,
+          folderPath: folderPath,
+          loadCallback: () => {
+            ztoolkit.log("文件列表对话框已打开");
+          }
+        };
+
+        const dialogHelper = new ztoolkit.Dialog(Math.min(fileList.length + 3, 20), 1)
+          .addCell(0, 0, {
+            tag: "h2",
+            properties: { innerHTML: `文件夹 "${folderPath}" 中的文件列表` },
+          })
+          .addCell(1, 0, {
+            tag: "p",
+            properties: { innerHTML: `共有 ${fileList.length} 个文件/目录:` },
+          });
+
+        // 添加每个文件到对话框
+        fileList.forEach((file, index) => {
+          dialogHelper.addCell(index + 2, 0, {
+            tag: "div",
+            properties: { innerHTML: file },
+            styles: {
+              padding: "2px 5px",
+              borderBottom: index < fileList.length - 1 ? "1px solid #ddd" : "none"
+            }
+          });
+        });
+
+        dialogHelper
+          .addButton("关闭", "close")
+          .setDialogData(dialogData)
+          .open("文件列表");
+
+      } else {
+        ztoolkit.getGlobal("alert")(`文件夹 "${folderPath}" 是空的`);
+      }
+
+    } catch (error: any) {
+      ztoolkit.log("遍历文件夹时出错:", error);
+      ztoolkit.getGlobal("alert")(`遍历文件夹时出错: ${error.message || error}`);
+    }
+  }
+
+  /*
+   * 显示用户在首选项中设置的文件夹路径
+   */
+  static showSelectedFolderPath() {
+    const { getFolderPath } = require("../utils/prefs");
+    const folderPath = getFolderPath();
+
+    if (folderPath) {
+      ztoolkit.getGlobal("alert")(`选择的文件夹路径: ${folderPath}`);
+    } else {
+      ztoolkit.getGlobal("alert")("您尚未设置文件夹路径。请在插件首选项中设置。");
+    }
   }
 
   @example
