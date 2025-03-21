@@ -167,8 +167,8 @@ export class UIExampleFactory {
     ztoolkit.Menu.register("collection", {
       tag: "menuitem",
       id: "zotero-collectionmenu-copy-pdfs",
-      label: getString("copy-all-pdf"),
-      commandListener: (ev) => this.copyAllPDFsInCollection(),
+      label: getString("export-all-pdf"),
+      commandListener: (ev) => this.exportAllPDFsInCollection(),
       icon: menuIcon,
     });
 
@@ -181,8 +181,8 @@ export class UIExampleFactory {
     // item menuitem with icon
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
-      label: getString("copy-pdf"),
-      commandListener: (ev) => this.copypdf(),
+      label: getString("export-pdf"),
+      commandListener: (ev) => this.exportpdf(),
       icon: menuIcon,
     });
 
@@ -220,7 +220,7 @@ export class UIExampleFactory {
   /**
    * 复制当前选中目录中所有论文的PDF附件到设置的文件夹
    */
-  static async copyAllPDFsInCollection() {
+  static async exportAllPDFsInCollection() {
     try {
       // 获取当前选中的collection
       const collectionsView = ztoolkit.getGlobal("ZoteroPane").collectionsView;
@@ -536,7 +536,7 @@ export class UIExampleFactory {
   /**
    * 获取当前选中条目的所有附件名称并显示，并复制第一个PDF附件到设置的文件夹
    */
-  static async copypdf() {
+  static async exportpdf() {
     try {
       // 获取当前选中的条目
       const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems();

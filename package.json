@@ -1,10 +1,10 @@
 {
-  "name": "zotero-quick-copy-pdf",
+  "name": "zotero-export-pdf",
   "type": "module",
   "version": "1.0.0",
-  "description": "quick copy pdf for zotero",
+  "description": "quick export pdf for zotero",
   "config": {
-    "addonName": "zotero quick copy pdf",
+    "addonName": "zotero export pdf",
     "addonID": "addontemplate@euclpts.com",
     "addonRef": "addontemplate",
     "addonInstance": "AddonTemplate",
