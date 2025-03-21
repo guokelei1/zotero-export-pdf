@@ -1,7 +1,7 @@
 {
   "name": "zotero-export-pdf",
   "type": "module",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "quick export pdf for zotero",
   "config": {
     "addonName": "zotero export pdf",
