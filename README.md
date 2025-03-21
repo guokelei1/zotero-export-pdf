@@ -23,6 +23,7 @@ This is a plugin template for [Zotero](https://www.zotero.org/).
 ### 1. 设置导出目录
 
 首先，在 Zotero 的 **编辑 > 设置** 中设置导出文件的目录。指定一个你希望导出 PDF 文件的文件夹路径。
+(MAC 下是 Zotero - 设置)
 
 ### 2. 导出论文或目录下的 PDF
 
@@ -42,5 +43,9 @@ This is a plugin template for [Zotero](https://www.zotero.org/).
 
 - `Research Paper A.pdf`
 - `Research Paper A_1.pdf`
+
+# 计划
+1. 添加选项，选择是否处理所有子目录中的pdf文件
+2. 添加选项，目录导出时，可以在导出文件夹中创建子文件夹存放目录下所有PDF
 
 

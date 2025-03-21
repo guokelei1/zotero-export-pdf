@@ -24,6 +24,7 @@ This is a plugin template for [Zotero](https://www.zotero.org/).
 ### 1. Set the Export Directory
 
 First, set the directory for exporting files in Zotero under **Edit > Preferences**. Specify the folder path where you want the PDF files to be exported.
+(Mac: Zotero > Preferences)
 
 ### 2. Export PDFs of Papers or Folders
 
