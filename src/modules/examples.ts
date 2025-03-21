@@ -73,7 +73,7 @@ export class BasicExampleFactory {
       pluginID: addon.data.config.addonID,
       src: rootURI + "content/preferences.xhtml",
       label: getString("prefs-title"),
-      image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
+      image: `chrome://${addon.data.config.addonRef}/content/icons/iconx2.png`,
     });
   }
 }
@@ -138,7 +138,7 @@ export class UIExampleFactory {
 
   @example
   static registerRightClickMenuItem() {
-    const menuIcon = `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`;
+    const menuIcon = `chrome://${addon.data.config.addonRef}/content/icons/icon.png`;
     // item menuitem with icon
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
@@ -155,52 +155,65 @@ export class UIExampleFactory {
    */
   @example
   static registerCollectionRightClickMenuItem() {
+    const menuIcon = `chrome://${addon.data.config.addonRef}/content/icons/icon.png`;
     // 为Collection注册右键菜单
-    ztoolkit.Menu.register("collection", {
-      tag: "menuitem",
-      id: "zotero-collectionmenu-list-content",
-      label: "列出当前目录内容",
-      commandListener: (ev) => this.listCollectionContents(),
-    });
+    // ztoolkit.Menu.register("collection", {
+    //   tag: "menuitem",
+    //   id: "zotero-collectionmenu-list-content",
+    //   label: "列出当前目录内容",
+    //   commandListener: (ev) => this.listCollectionContents(),
+    //   icon: menuIcon,
+    // });
     ztoolkit.Menu.register("collection", {
       tag: "menuitem",
       id: "zotero-collectionmenu-copy-pdfs",
-      label: "复制此目录中所有PDF",
+      label: getString("copy-all-pdf"),
       commandListener: (ev) => this.copyAllPDFsInCollection(),
+      icon: menuIcon,
     });
 
   }
 
   @example
   static registerRightClickMenuPopup(win: Window) {
-    ztoolkit.Menu.register(
-      "item",
-      {
-        tag: "menu",
-        label: getString("menupopup-label"),
-        children: [
-          {
-            tag: "menuitem",
-            label: getString("menuitem-submenulabel"),
-            oncommand: "alert('Hello World! Sub Menuitem.')",
-          },
-          {
-            tag: "menuitem",
-            label: "显示选择的文件夹",
-            commandListener: (ev) => this.istlFilesInFolder(),
-          },
-          {
-            tag: "menuitem",
-            label: "复制PDF",
-            commandListener: (ev) => this.showItemAttachmentNames(),
-          },
-        ],
-      },
-      "before",
-      win.document.querySelector(
-        "#zotero-itemmenu-addontemplate-test",
-      ) as XUL.MenuItem,
-    );
+
+    const menuIcon = `chrome://${addon.data.config.addonRef}/content/icons/icon.png`;
+    // item menuitem with icon
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      label: getString("copy-pdf"),
+      commandListener: (ev) => this.copypdf(),
+      icon: menuIcon,
+    });
+
+    // ztoolkit.Menu.register(
+    //   "item",
+    //   {
+    //     tag: "menu",
+    //     label: getString("menupopup-label"),
+    //     children: [
+    //       // {
+    //       //   tag: "menuitem",
+    //       //   label: getString("menuitem-submenulabel"),
+    //       //   oncommand: "alert('Hello World! Sub Menuitem.')",
+    //       // },
+    //       // {
+    //       //   tag: "menuitem",
+    //       //   label: "显示选择的文件夹",
+    //       //   commandListener: (ev) => this.istlFilesInFolder(),
+    //       // },
+    //       {
+    //         tag: "menuitem",
+    //         label: "复制PDF",
+    //         commandListener: (ev) => this.copyfolderpdf(),
+    //       },
+    //     ],
+    //   },
+    //   "before",
+    //   win.document.querySelector(
+    //     "#zotero-itemmenu-addontemplate-test",
+    //   ) as XUL.MenuItem,
+    // );
   }
 
 
@@ -271,7 +284,7 @@ export class UIExampleFactory {
       }
 
       progressWindow.changeLine({
-        text: `找到 ${regularItems.length} 篇论文，正在处理附件...`,
+        text: `找到 ${regularItems.length} 篇论文`,
         type: "default",
         progress: 20
       });
@@ -287,46 +300,52 @@ export class UIExampleFactory {
           const attachments = await item.getAttachments();
           if (attachments && attachments.length > 0) {
             const itemTitle = item.getField("title");
-            let pdfFound = false;
 
             // 使用条目标题作为文件名，替换掉非法字符
-            const safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
+            let found = 0;
 
             for (const attachmentID of attachments) {
               const attachment = await Zotero.Items.getAsync(attachmentID);
               if (attachment && attachment.isAttachment()) {
+                let safeItemTitle = itemTitle;
+                // 使用条目标题作为文件名，替换掉非法字符
+                if (found > 0) {
+                  safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_") + `_${found}`;
+                } else {
+                  safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
+                }
                 // 如果是PDF且尚未处理过PDF，则复制它
                 const contentType = attachment.getField("contentType");
-                if (!pdfFound) {
-                  pdfFound = true;
-                  try {
-                    // 获取附件的文件路径
-                    const attachmentFilePath = await attachment.getFilePathAsync();
+                //在zotero中输出附件的contentType
+                //ztoolkit.log(`附件 ${attachment.getField("title")} 的 contentType: ${contentType}`, "info");
+                try {
+                  // 获取附件的文件路径
+                  const attachmentFilePath = await attachment.getFilePathAsync();
 
-                    if (attachmentFilePath) {
-                      // 创建源文件对象
-                      const sourceFile = (Components as any).classes["@mozilla.org/file/local;1"]
-                        .createInstance(Components.interfaces.nsIFile);
-                      sourceFile.initWithPath(attachmentFilePath);
+                  if (attachmentFilePath && typeof attachmentFilePath === 'string' && attachmentFilePath.endsWith(".pdf")) {
+                    // 创建源文件对象
+                    const sourceFile = (Components as any).classes["@mozilla.org/file/local;1"]
+                      .createInstance(Components.interfaces.nsIFile);
+                    sourceFile.initWithPath(attachmentFilePath);
 
-                      // 创建目标文件对象
-                      const targetFile = targetDir.clone();
-                      targetFile.append(`${safeItemTitle}.pdf`);
+                    // 创建目标文件对象
+                    const targetFile = targetDir.clone();
+                    targetFile.append(`${safeItemTitle}.pdf`);
 
-                      // 检查目标文件是否已存在
-                      if (targetFile.exists()) {
-                        targetFile.remove(false); // 删除已存在的文件
-                      }
-
-                      // 复制文件
-                      sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
-                      copiedFiles++;
+                    // 检查目标文件是否已存在
+                    if (targetFile.exists()) {
+                      targetFile.remove(false); // 删除已存在的文件
                     }
-                  } catch (e) {
-                    ztoolkit.log(`复制附件时出错: ${e}`, "error");
-                    errorItems++;
+
+                    // 复制文件
+                    sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
+                    copiedFiles++;
                   }
+                } catch (e) {
+                  ztoolkit.log(`复制附件时出错: ${e}`, "error");
+                  errorItems++;
                 }
+
               }
             }
           }
@@ -335,7 +354,7 @@ export class UIExampleFactory {
           // 更新进度
           const progress = Math.floor((processedItems / regularItems.length) * 80) + 20;
           progressWindow.changeLine({
-            text: `已处理 ${processedItems}/${regularItems.length} 篇论文，复制了 ${copiedFiles} 个PDF文件`,
+            text: `复制了 ${copiedFiles} 个PDF文件`,
             type: "default",
             progress: progress
           });
@@ -347,15 +366,12 @@ export class UIExampleFactory {
 
       // 显示最终结果
       progressWindow.changeLine({
-        text: `共处理 ${processedItems} 篇论文，成功复制 ${copiedFiles} 个PDF文件${errorItems > 0 ? `，${errorItems} 个错误` : ''}`,
+        text: `成功复制 ${copiedFiles} 个PDF文件${errorItems > 0 ? `，${errorItems} 个错误` : ''}`,
         type: errorItems > 0 ? "warning" : "success",
         progress: 100
       });
 
-      // 如果有复制的文件，显示详细信息
-      if (copiedFiles > 0) {
-        ztoolkit.getGlobal("alert")(`已成功将 ${copiedFiles} 个PDF文件复制到:\n${targetFolderPath}`);
-      }
+
 
     } catch (error: any) {
       ztoolkit.log("处理目录PDF时出错:", error);
@@ -520,7 +536,7 @@ export class UIExampleFactory {
   /**
    * 获取当前选中条目的所有附件名称并显示，并复制第一个PDF附件到设置的文件夹
    */
-  static async showItemAttachmentNames() {
+  static async copypdf() {
     try {
       // 获取当前选中的条目
       const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems();
@@ -544,7 +560,7 @@ export class UIExampleFactory {
 
       if (!targetFolderPath) {
         progressWindow.changeLine({
-          text: "未设置目标文件夹，请先在首选项中设置文件夹路径",
+          text: "请先在首选项中设置文件夹路径",
           type: "error",
           progress: 100
         });
@@ -558,7 +574,7 @@ export class UIExampleFactory {
 
       if (!targetDir.exists() || !targetDir.isDirectory()) {
         progressWindow.changeLine({
-          text: `目标文件夹不存在: ${targetFolderPath}`,
+          text: `文件夹不存在: ${targetFolderPath}`,
           type: "error",
           progress: 100
         });
@@ -570,58 +586,61 @@ export class UIExampleFactory {
       let copiedFiles = 0;
 
       progressWindow.changeLine({
-        text: `正在处理 ${items.length} 个条目的附件...`,
+        text: `处理 ${items.length} 个附件...`,
         type: "default",
         progress: 20
       });
 
       for (const item of items) {
         const attachments = await item.getAttachments();
+        let found = 0;
         if (attachments && attachments.length > 0) {
           const itemTitle = item.getField("title");
           const attachmentNames = [];
-          let pdfFound = false;
 
-          // 使用条目标题作为文件名，替换掉非法字符
-          const safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
 
           for (const attachmentID of attachments) {
+            let safeItemTitle = itemTitle;
+            // 使用条目标题作为文件名，替换掉非法字符
+            if (found > 0) {
+              safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_") + `_${found}`;
+            } else {
+              safeItemTitle = itemTitle.replace(/[\\/:*?"<>|]/g, "_");
+            }
+            found++;
             const attachment = await Zotero.Items.getAsync(attachmentID);
+
             if (attachment && attachment.isAttachment()) {
               const attachmentName = attachment.getField("title");
               attachmentNames.push(attachmentName);
+              //打印附件的源文件名称，包括文件后缀名
+              try {
+                // 获取附件的文件路径
+                const attachmentFilePath = await attachment.getFilePathAsync();
+                ztoolkit.log(`附件 ${attachmentName} 的文件路径: ${attachmentFilePath}`, "");
+                if (attachmentFilePath && typeof attachmentFilePath === 'string' && attachmentFilePath.endsWith(".pdf")) {
+                  // 创建源文件对象
+                  const sourceFile = (Components.classes as any)["@mozilla.org/file/local;1"]
+                    .createInstance(Components.interfaces.nsIFile);
+                  sourceFile.initWithPath(attachmentFilePath);
 
-              // 如果是PDF且尚未处理过PDF，则复制它
-              const contentType = attachment.getField("contentType");
-              if (!pdfFound) {
-                pdfFound = true;
-                try {
-                  // 获取附件的文件路径
-                  const attachmentFilePath = await attachment.getFilePathAsync();
+                  // 创建目标文件对象
+                  const targetFile = targetDir.clone();
+                  targetFile.append(`${safeItemTitle}.pdf`);
 
-                  if (attachmentFilePath) {
-                    // 创建源文件对象
-                    const sourceFile = (Components.classes as any)["@mozilla.org/file/local;1"]
-                      .createInstance(Components.interfaces.nsIFile);
-                    sourceFile.initWithPath(attachmentFilePath);
-
-                    // 创建目标文件对象
-                    const targetFile = targetDir.clone();
-                    targetFile.append(`${safeItemTitle}.pdf`);
-
-                    // 检查目标文件是否已存在
-                    if (targetFile.exists()) {
-                      targetFile.remove(false); // 删除已存在的文件
-                    }
-
-                    // 复制文件
-                    sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
-                    copiedFiles++;
+                  // 检查目标文件是否已存在
+                  if (targetFile.exists()) {
+                    targetFile.remove(false); // 删除已存在的文件
                   }
-                } catch (e) {
-                  ztoolkit.log(`复制附件时出错: ${e}`, "error");
+
+                  // 复制文件
+                  sourceFile.copyTo(targetDir, `${safeItemTitle}.pdf`);
+                  copiedFiles++;
                 }
+              } catch (e) {
+                ztoolkit.log(`复制附件时出错: ${e}`, "error");
               }
+
             }
           }
 
@@ -635,30 +654,10 @@ export class UIExampleFactory {
       }
 
       progressWindow.changeLine({
-        text: `已处理 ${items.length} 个条目，复制了 ${copiedFiles} 个PDF文件`,
+        text: `复制了 ${copiedFiles} 个PDF文件`,
         type: "success",
         progress: 100
       });
-
-      // 显示附件名称
-      if (allAttachments.length > 0) {
-        let message = "";
-
-        for (const item of allAttachments) {
-          message += `条目: ${item.itemTitle}\n`;
-          message += `附件: ${item.attachmentNames.join(", ")}\n\n`;
-        }
-
-        if (copiedFiles > 0) {
-          message += `------------------\n`;
-          message += `已将 ${copiedFiles} 个PDF文件复制到:\n${targetFolderPath}`;
-        }
-
-        ztoolkit.getGlobal("alert")(message);
-      } else {
-        ztoolkit.getGlobal("alert")("所选条目没有附件");
-      }
-
     } catch (error: any) {
       ztoolkit.log("获取附件信息时出错:", error);
       ztoolkit.getGlobal("alert")(`获取附件信息时出错: ${error.message || error}`);

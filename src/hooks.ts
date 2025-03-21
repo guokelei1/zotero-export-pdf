@@ -22,19 +22,19 @@ async function onStartup() {
 
   BasicExampleFactory.registerNotifier();
 
-  KeyExampleFactory.registerShortcuts();
+  //KeyExampleFactory.registerShortcuts();
 
-  await UIExampleFactory.registerExtraColumn();
+  // await UIExampleFactory.registerExtraColumn();
 
-  await UIExampleFactory.registerExtraColumnWithCustomCell();
+  //await UIExampleFactory.registerExtraColumnWithCustomCell();
 
-  UIExampleFactory.registerCollectionRightClickMenuItem();
 
-  UIExampleFactory.registerItemPaneCustomInfoRow();
 
-  UIExampleFactory.registerItemPaneSection();
+  //UIExampleFactory.registerItemPaneCustomInfoRow();
 
-  UIExampleFactory.registerReaderItemPaneSection();
+  //UIExampleFactory.registerItemPaneSection();
+
+  // UIExampleFactory.registerReaderItemPaneSection();
 
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
@@ -50,46 +50,47 @@ async function onMainWindowLoad(win: Window): Promise<void> {
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
 
-  const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
-    closeOnClick: true,
-    closeTime: -1,
-  })
-    .createLine({
-      text: getString("startup-begin"),
-      type: "default",
-      progress: 0,
-    })
-    .show();
+  // const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+  //   closeOnClick: true,
+  //   closeTime: -1,
+  // })
+  //   .createLine({
+  //     text: getString("startup-begin"),
+  //     type: "default",
+  //     progress: 0,
+  //   })
+  //   .show();
 
   await Zotero.Promise.delay(1000);
-  popupWin.changeLine({
-    progress: 30,
-    text: `[30%] ${getString("startup-begin")}`,
-  });
+  // popupWin.changeLine({
+  //   progress: 30,
+  //   text: `[30%] ${getString("startup-begin")}`,
+  // });
 
-  UIExampleFactory.registerStyleSheet(win);
+  //UIExampleFactory.registerStyleSheet(win);
 
-  UIExampleFactory.registerRightClickMenuItem();
+  //UIExampleFactory.registerRightClickMenuItem();
+  UIExampleFactory.registerCollectionRightClickMenuItem();
 
   UIExampleFactory.registerRightClickMenuPopup(win);
 
-  UIExampleFactory.registerWindowMenuWithSeparator();
+  //UIExampleFactory.registerWindowMenuWithSeparator();
 
-  PromptExampleFactory.registerNormalCommandExample();
+  //PromptExampleFactory.registerNormalCommandExample();
 
-  PromptExampleFactory.registerAnonymousCommandExample(win);
+  //PromptExampleFactory.registerAnonymousCommandExample(win);
 
-  PromptExampleFactory.registerConditionalCommandExample();
+  //PromptExampleFactory.registerConditionalCommandExample();
 
   await Zotero.Promise.delay(1000);
 
-  popupWin.changeLine({
-    progress: 100,
-    text: `[100%] ${getString("startup-finish")}`,
-  });
-  popupWin.startCloseTimer(5000);
+  // popupWin.changeLine({
+  //   progress: 100,
+  //   text: `[100%] ${getString("startup-finish")}`,
+  // });
+  // popupWin.startCloseTimer(5000);
 
-  addon.hooks.onDialogEvents("dialogExample");
+  //addon.hooks.onDialogEvents("dialogExample");
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {

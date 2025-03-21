@@ -1,10 +1,10 @@
 {
-  "name": "zotero-plugin-template",
+  "name": "zotero-quick-copy-pdf",
   "type": "module",
-  "version": "3.0.4",
-  "description": "Zotero Plugin Template",
+  "version": "1.0.0",
+  "description": "quick copy pdf for zotero",
   "config": {
-    "addonName": "Zotero Plugin Template",
+    "addonName": "zotero quick copy pdf",
     "addonID": "addontemplate@euclpts.com",
     "addonRef": "addontemplate",
     "addonInstance": "AddonTemplate",
@@ -12,13 +12,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/windingwind/zotero-plugin-template.git"
+    "url": "git+https://github.com/guokelei1/zotero-quick-copy-pdf.git"
   },
-  "author": "windingwind",
+  "author": "guokelei1",
   "bugs": {
-    "url": "https://github.com/windingwind/zotero-plugin-template/issues"
+    "url": "https://github.com/guokelei1/zotero-quick-copy-pdf/issues"
   },
-  "homepage": "https://github.com/windingwind/zotero-plugin-template#readme",
+  "homepage": "https://github.com/guokelei1/zotero-quick-copy-pdf#readme",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
