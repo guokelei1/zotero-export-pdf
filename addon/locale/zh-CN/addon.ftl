@@ -9,5 +9,5 @@ prefs-table-title = 标题
 prefs-table-detail = 详情
 tabpanel-lib-tab-label = 库标签
 tabpanel-reader-tab-label = 阅读器标签
-export-all-pdf = 导出pdf
-export-pdf = 导出PDFs
+export-all-pdf = 导出PDF
+export-pdf = 导出PDF

@@ -370,6 +370,7 @@ export class UIExampleFactory {
         type: errorItems > 0 ? "warning" : "success",
         progress: 100
       });
+      progressWindow.startCloseTimer(2000);
 
 
 
@@ -658,6 +659,8 @@ export class UIExampleFactory {
         type: "success",
         progress: 100
       });
+      //设置窗口消失时间
+      progressWindow.startCloseTimer(2000);
     } catch (error: any) {
       ztoolkit.log("获取附件信息时出错:", error);
       ztoolkit.getGlobal("alert")(`获取附件信息时出错: ${error.message || error}`);

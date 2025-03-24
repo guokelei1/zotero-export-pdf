@@ -20,7 +20,7 @@ async function onStartup() {
 
   BasicExampleFactory.registerPrefs();
 
-  BasicExampleFactory.registerNotifier();
+  //BasicExampleFactory.registerNotifier();
 
   //KeyExampleFactory.registerShortcuts();
 
