@@ -1,7 +1,7 @@
 {
   "name": "zotero-export-pdf",
   "type": "module",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "quick export pdf for zotero",
   "config": {
     "addonName": "zotero export pdf",
@@ -12,13 +12,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/guokelei1/zotero-quick-copy-pdf.git"
+    "url": "git+https://github.com/guokelei1/zotero-export-pdf"
   },
   "author": "guokelei1",
   "bugs": {
-    "url": "https://github.com/guokelei1/zotero-quick-copy-pdf/issues"
+    "url": "https://github.com/guokelei1/zotero-export-pdf/issues"
   },
-  "homepage": "https://github.com/guokelei1/zotero-quick-copy-pdf#readme",
+  "homepage": "https://github.com/guokelei1/zotero-export-pdf#readme",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
