@@ -33,6 +33,7 @@ export default defineConfig({
           __env__: `"${process.env.NODE_ENV}"`,
         },
         bundle: true,
+        // Keep Zotero 7 compatibility while running unchanged on Zotero 9.
         target: "firefox115",
         outfile: `.scaffold/build/addon/content/scripts/${pkg.config.addonRef}.js`,
       },

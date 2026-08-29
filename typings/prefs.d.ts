@@ -10,6 +10,7 @@ declare namespace _ZoteroTypes {
       "enable": boolean;
       "input": string;
       "folderPath": string;
+      "noteFolderPath": string;
     };
   }
 }

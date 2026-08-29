@@ -1,12 +1,11 @@
-#  Zotero PDF Export
+# Zotero PDF Export
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+[![zotero target version](https://img.shields.io/badge/Zotero-7--9-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 
-This is a plugin template for [Zotero](https://www.zotero.org/).
+This plugin supports [Zotero](https://www.zotero.org/) 7 through 9.
 
-[English](doc/README-en.md) | [简体中文](doc/README.md) 
-
+[English](doc/README-en.md) | [简体中文](README.md)
 
 ## 介绍
 
@@ -19,12 +18,13 @@ This is a plugin template for [Zotero](https://www.zotero.org/).
 - 在编辑-设置中设置导出目录，方便用户管理导出的 PDF 文件和笔记。
 - 支持批量导出指定论文或目录下所有 PDF 附件，并根据论文条目的名称重命名附件。
 - 支持批量导出指定论文或目录下所有笔记，笔记会保存在以当前时间命名的子文件夹中。
-  
+
 ## 使用方法
 
 ### 1. 设置导出目录
 
 首先，在 Zotero 的 **编辑 > 设置** 中设置导出文件的目录：
+
 - **PDF导出文件夹路径**：指定你希望导出 PDF 文件的文件夹路径。
 - **笔记导出文件夹路径**：指定你希望导出笔记的文件夹路径。
 
@@ -74,7 +74,6 @@ This is a plugin template for [Zotero](https://www.zotero.org/).
 ```
 
 # 计划
+
 1. 添加选项，选择是否处理所有子目录中的pdf文件和笔记
 2. 添加选项，目录导出时，可以在导出文件夹中创建子文件夹存放目录下所有PDF
-
-

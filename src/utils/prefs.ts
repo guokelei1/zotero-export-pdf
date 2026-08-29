@@ -35,7 +35,6 @@ export function clearPref(key: string) {
   return Zotero.Prefs.clear(`${PREFS_PREFIX}.${key}`, true);
 }
 
-
 /**
  * 获取用户选择的PDF导出文件夹路径
  * @returns 文件夹路径，如果未设置则返回空字符串
