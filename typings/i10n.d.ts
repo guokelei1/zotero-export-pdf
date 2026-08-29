@@ -28,6 +28,7 @@ export type FluentMessageId =
   | 'mineru-convert'
   | 'mineru-done'
   | 'mineru-download'
+  | 'mineru-gpu-prompt'
   | 'mineru-no-pdf'
   | 'mineru-upload'
   | 'note-done'

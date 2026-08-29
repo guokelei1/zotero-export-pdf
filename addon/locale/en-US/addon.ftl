@@ -31,6 +31,7 @@ note-progress = Processed { $current }/{ $total } items; exported { $count } not
 note-done = Exported { $count } notes to { $folder }; { $errors } failed
 untitled-item = Untitled item
 python-run = Convert PDFs to Markdown (MinerU)
+mineru-gpu-prompt = Current GPU usage below. Choose the GPU for this conversion:
 mineru-no-pdf = No PDF attachments in the selected items
 mineru-upload = Uploading { $count } PDFs to 202...
 mineru-convert = Converting with MinerU, this may take a few minutes...

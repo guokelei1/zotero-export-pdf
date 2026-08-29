@@ -31,6 +31,7 @@ note-progress = 已处理 { $current }/{ $total } 个条目，导出 { $count } 
 note-done = 已导出 { $count } 个笔记到 { $folder }，失败 { $errors } 个
 untitled-item = 未命名条目
 python-run = 转换PDF为Markdown(MinerU)
+mineru-gpu-prompt = 当前 GPU 占用情况如下，请选择本次转换使用的 GPU：
 mineru-no-pdf = 选中的条目中没有 PDF 附件
 mineru-upload = 正在上传 { $count } 个 PDF 到 202...
 mineru-convert = MinerU 转换中，可能需要几分钟...

@@ -2,8 +2,9 @@
 """MinerU 转换任务的远端执行器（在 Zotero 里被 JS 按阶段调用）。
 
 用法:
+  python mineru_task.py gpu
   python mineru_task.py upload  <task> <json文件>
-  python mineru_task.py convert <task>
+  python mineru_task.py convert <task> [gpu序号]
   python mineru_task.py collect <task>
 
 约定:
@@ -99,10 +100,19 @@ def cmd_upload(task, json_path):
     return 0
 
 
-def cmd_convert(task):
+def cmd_gpu():
+    completed = run_ssh("nvidia-smi", timeout=60)
+    if completed.returncode != 0:
+        return fail(f"nvidia-smi failed: {completed.stderr.strip()}")
+    emit({"ok": True, "report": completed.stdout})
+    return 0
+
+
+def cmd_convert(task, gpu=None):
+    gpu_arg = f" --gpu {gpu}" if gpu is not None else ""
     try:
         completed = run_ssh(
-            f"{MINERU_SH} batch {INPUT_DIR}/{task}", timeout=1800
+            f"{MINERU_SH} batch {INPUT_DIR}/{task}{gpu_arg}", timeout=1800
         )
     except subprocess.TimeoutExpired:
         return fail("mineru.sh timed out after 1800s")
@@ -160,10 +170,13 @@ def main() -> int:
         return fail("usage: mineru_task.py upload|convert|collect <task> [json]")
     action = argv[0]
     try:
+        if action == "gpu":
+            return cmd_gpu()
         if action == "upload" and len(argv) == 3:
             return cmd_upload(argv[1], argv[2])
-        if action == "convert" and len(argv) == 2:
-            return cmd_convert(argv[1])
+        if action == "convert" and len(argv) in (2, 3):
+            gpu = int(argv[2]) if len(argv) == 3 else None
+            return cmd_convert(argv[1], gpu)
         if action == "collect" and len(argv) == 2:
             return cmd_collect(argv[1])
         return fail(f"invalid arguments: {argv}")

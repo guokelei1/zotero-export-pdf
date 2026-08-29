@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<window
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  title="MinerU"
+  width="640"
+  height="480"
+  style="display: flex; flex-direction: column; padding: 8px"
+>
+  <script><![CDATA[
+    var args = window.arguments[0];
+    var done = false;
+
+    function onLoad() {
+      document.getElementById("mineru-gpu-title").textContent = args.title;
+      document.getElementById("gpu-report").textContent = args.report;
+    }
+
+    function choose(index) {
+      if (done) return;
+      done = true;
+      args.select(index);
+      window.close();
+    }
+
+    window.addEventListener("close", function (event) {
+      if (done) return;
+      done = true;
+      args.cancel();
+    });
+
+    window.addEventListener("load", onLoad);
+  ]]></script>
+
+  <html:label id="mineru-gpu-title" style="font-size: 14px; margin-bottom: 6px"></html:label>
+  <html:pre
+    id="gpu-report"
+    style="flex: 1; overflow: auto; white-space: pre; font-family: monospace; background: rgba(127, 127, 127, 0.15); padding: 8px; border-radius: 4px"
+  ></html:pre>
+  <hbox style="margin-top: 8px" pack="center">
+    <button label="1 (GPU 0)" oncommand="choose(0)"></button>
+    <button label="2 (GPU 1)" oncommand="choose(1)"></button>
+    <button label="3 (GPU 2)" oncommand="choose(2)"></button>
+    <button label="4 (GPU 3)" oncommand="choose(3)"></button>
+  </hbox>
+</window>

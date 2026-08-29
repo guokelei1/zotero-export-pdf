@@ -56,6 +56,35 @@ export function unregisterMineruMenu(win: Window): void {
 }
 
 /**
+ * 弹出模态对话框展示 nvidia-smi 输出，等待用户点选 GPU（1-4 按钮 → GPU 0-3）。
+ * 用户直接关闭对话框返回 null，流程中止。
+ */
+function selectGPU(win: Window, report: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: number | null) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+    win.openDialog(
+      `chrome://${addon.data.config.addonRef}/content/gpu_select.xhtml`,
+      "mineru-gpu-select",
+      "chrome,centerscreen,modal",
+      {
+        report,
+        title: getString("mineru-gpu-prompt"),
+        select: (index: number) => settle(index),
+        cancel: () => settle(null),
+      },
+    );
+    // modal 打开方式：走到这里说明窗口已关闭；未点按钮即关闭视为取消
+    settle(null);
+  });
+}
+
+/**
  * 右键触发：把选中条目的 PDF（识别逻辑同"导出PDF"，支持单选/多选）上传到
  * 202 的 /home/gkl/mineru/data/input/<时间戳>/，远程执行 mineru.sh batch 转换，
  * 再把 /home/gkl/mineru/data/markdown/<时间戳>/ 下的同名 .md 下载回来，
@@ -65,6 +94,15 @@ async function runMineruTask(win: Window): Promise<void> {
   const items = getZoteroPane(win).getSelectedItems();
   if (!items.length) {
     win.alert(getString("error-no-items"));
+    return;
+  }
+
+  // 第一步：查询 202 的 GPU 占用情况，由用户选择使用哪块 GPU
+  const gpuReport = (await runPythonStage(["gpu"], "nvidia-smi")) as {
+    report: string;
+  };
+  const gpu = await selectGPU(win, gpuReport.report);
+  if (gpu === null) {
     return;
   }
 
@@ -93,7 +131,7 @@ async function runMineruTask(win: Window): Promise<void> {
       progress: 35,
     });
 
-    await runPythonStage(["convert", task], "run mineru.sh");
+    await runPythonStage(["convert", task, gpu], "run mineru.sh");
 
     progressWindow.changeLine({
       text: getString("mineru-download"),
