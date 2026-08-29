@@ -50,3 +50,11 @@ export function getFolderPath(): string {
 export function getNoteFolderPath(): string {
   return (getPref("noteFolderPath" as any) as string) || "";
 }
+
+/**
+ * 获取用户选择的MD导出文件夹路径
+ * @returns 文件夹路径，如果未设置则返回空字符串
+ */
+export function getMdFolderPath(): string {
+  return (getPref("mdFolderPath" as any) as string) || "";
+}

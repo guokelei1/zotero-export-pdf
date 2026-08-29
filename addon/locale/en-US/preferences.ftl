@@ -9,3 +9,6 @@ pref-select-folder =
 pref-note-folder-path = Note Export Folder Path
 pref-select-note-folder =
     .label = Browse...
+pref-md-folder-path = Markdown Export Folder Path
+pref-select-md-folder =
+    .label = Browse...

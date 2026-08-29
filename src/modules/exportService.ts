@@ -1,11 +1,17 @@
 import { getString } from "../utils/locale";
-import { getFolderPath, getNoteFolderPath } from "../utils/prefs";
+import {
+  getFolderPath,
+  getMdFolderPath,
+  getNoteFolderPath,
+} from "../utils/prefs";
 
 const MENU_IDS = [
   "zotero-export-pdf-item-pdf",
   "zotero-export-pdf-item-notes",
+  "zotero-export-pdf-item-md",
   "zotero-export-pdf-collection-pdf",
   "zotero-export-pdf-collection-notes",
+  "zotero-export-pdf-collection-md",
 ] as const;
 
 type ExportStats = {
@@ -32,17 +38,31 @@ export function registerExportMenus(win: Window): void {
   );
   addMenuItem(
     win,
-    "zotero-collectionmenu",
+    "zotero-itemmenu",
     MENU_IDS[2],
+    getString("export-md"),
+    () => exportSelectedMDs(win),
+  );
+  addMenuItem(
+    win,
+    "zotero-collectionmenu",
+    MENU_IDS[3],
     getString("export-pdf"),
     () => exportCollectionPDFs(win),
   );
   addMenuItem(
     win,
     "zotero-collectionmenu",
-    MENU_IDS[3],
+    MENU_IDS[4],
     getString("export-note"),
     () => exportCollectionNotes(win),
+  );
+  addMenuItem(
+    win,
+    "zotero-collectionmenu",
+    MENU_IDS[5],
+    getString("export-md"),
+    () => exportCollectionMDs(win),
   );
 }
 
@@ -215,6 +235,153 @@ async function getPDFAttachments(item: Zotero.Item): Promise<Zotero.Item[]> {
 
   const attachments = await Zotero.Items.getAsync(item.getAttachments());
   return attachments.filter((attachment) => attachment.isPDFAttachment());
+}
+
+async function exportSelectedMDs(win: Window): Promise<void> {
+  const items = getZoteroPane(win).getSelectedItems();
+  if (!items.length) {
+    win.alert(getString("error-no-items"));
+    return;
+  }
+
+  await runMDExport(win, items, getMdFolderPath());
+}
+
+async function exportCollectionMDs(win: Window): Promise<void> {
+  const collection = getZoteroPane(win).getSelectedCollection();
+  if (!collection) {
+    win.alert(getString("error-no-collection"));
+    return;
+  }
+
+  const items = collection
+    .getChildItems()
+    .filter((item) => item.isRegularItem());
+  if (!items.length) {
+    win.alert(getString("error-empty-collection"));
+    return;
+  }
+
+  await runMDExport(win, items, getMdFolderPath());
+}
+
+/**
+ * 导出选中条目下的 Markdown 附件（MinerU 转换后插入的那类），
+ * 逻辑与 PDF 导出一致：按条目标题命名，重名自动加序号。
+ */
+async function runMDExport(
+  win: Window,
+  items: Zotero.Item[],
+  targetDirectory: string,
+): Promise<void> {
+  if (!targetDirectory) {
+    win.alert(getString("error-no-md-folder"));
+    return;
+  }
+
+  try {
+    await assertDirectory(targetDirectory);
+  } catch (error) {
+    win.alert(
+      getString("error-invalid-folder", { args: { path: targetDirectory } }),
+    );
+    ztoolkit.log("Invalid MD export folder", error);
+    return;
+  }
+
+  const progressWindow = createProgressWindow(
+    win,
+    getString("md-progress-start", { args: { total: items.length } }),
+  );
+
+  const stats: ExportStats = { exported: 0, errors: 0 };
+  const usedNames = new Set<string>();
+  const seenAttachments = new Set<number>();
+
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+    try {
+      const attachments = await getMDAttachments(item);
+      const baseName = sanitizeFilename(getItemTitle(item));
+
+      for (let mdIndex = 0; mdIndex < attachments.length; mdIndex++) {
+        const attachment = attachments[mdIndex];
+        if (seenAttachments.has(attachment.id)) {
+          continue;
+        }
+        seenAttachments.add(attachment.id);
+
+        try {
+          const sourcePath = await attachment.getFilePathAsync();
+          if (!sourcePath) {
+            throw new Error("Attachment has no local file");
+          }
+
+          const numberedName =
+            mdIndex === 0 ? baseName : `${baseName}_${mdIndex}`;
+          const fileName = reserveFilename(numberedName, ".md", usedNames);
+          await IOUtils.copy(
+            sourcePath,
+            PathUtils.join(targetDirectory, fileName),
+            { noOverwrite: false },
+          );
+          stats.exported++;
+        } catch (error) {
+          stats.errors++;
+          ztoolkit.log(`Failed to export attachment ${attachment.id}`, error);
+        }
+      }
+    } catch (error) {
+      stats.errors++;
+      ztoolkit.log(`Failed to process item ${item.id}`, error);
+    }
+
+    progressWindow.changeLine({
+      text: getString("md-progress", {
+        args: {
+          current: index + 1,
+          total: items.length,
+          count: stats.exported,
+        },
+      }),
+      type: "default",
+      progress: Math.round(((index + 1) / items.length) * 100),
+    });
+  }
+
+  finishProgress(
+    progressWindow,
+    getString("md-done", {
+      args: { count: stats.exported, errors: stats.errors },
+    }),
+    stats.errors,
+  );
+}
+
+async function getMDAttachments(item: Zotero.Item): Promise<Zotero.Item[]> {
+  if (isMarkdownAttachment(item)) {
+    return [item];
+  }
+  if (!item.isRegularItem()) {
+    return [];
+  }
+
+  const attachments = await Zotero.Items.getAsync(item.getAttachments());
+  return attachments.filter((attachment) => isMarkdownAttachment(attachment));
+}
+
+/**
+ * Markdown 附件的识别：转换功能插入的附件 contentType 为 text/markdown；
+ * 兜底再看存储文件名是否以 .md 结尾（兼容来源不规范的情况）。
+ */
+function isMarkdownAttachment(item: Zotero.Item): boolean {
+  if (!item.isAttachment()) {
+    return false;
+  }
+  if (item.attachmentContentType === "text/markdown") {
+    return true;
+  }
+  return /\.md$/i.test(item.attachmentFilename || "");
 }
 
 async function exportSelectedNotes(win: Window): Promise<void> {

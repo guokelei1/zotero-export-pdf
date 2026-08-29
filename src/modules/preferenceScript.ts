@@ -16,13 +16,20 @@ export function registerPrefsScripts(win: Window): void {
     "noteFolderPath",
     getString("pick-note-folder"),
   );
+  bindFolderPicker(
+    win,
+    "select-md-folder",
+    "mdFolderPath",
+    "mdFolderPath",
+    getString("pick-md-folder"),
+  );
 }
 
 function bindFolderPicker(
   win: Window,
   buttonSuffix: string,
   inputSuffix: string,
-  pref: "folderPath" | "noteFolderPath",
+  pref: "folderPath" | "noteFolderPath" | "mdFolderPath",
   title: string,
 ): void {
   const prefix = `zotero-prefpane-${addon.data.config.addonRef}`;

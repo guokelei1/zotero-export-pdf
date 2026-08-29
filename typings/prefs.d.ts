@@ -11,6 +11,7 @@ declare namespace _ZoteroTypes {
       "input": string;
       "folderPath": string;
       "noteFolderPath": string;
+      "mdFolderPath": string;
     };
   }
 }

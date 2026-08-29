@@ -9,3 +9,6 @@ pref-select-folder =
 pref-note-folder-path = 笔记导出文件夹路径
 pref-select-note-folder =
     .label = 浏览...
+pref-md-folder-path = MD导出文件夹路径
+pref-select-md-folder =
+    .label = 浏览...
